@@ -5160,39 +5160,54 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 canvas.restore();
             }
             if (user != null && !MessagesController.isSupportUser(user) && !user.bot) {
-                boolean isOnline = isOnline();
-                wasDrawnOnline = isOnline;
-                if (isOnline || onlineProgress != 0) {
-                    int top = (int) (storyParams.originalAvatarRect.bottom - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 6 : 8));
-                    int left;
-                    if (LocaleController.isRTL) {
-                        left = (int) (storyParams.originalAvatarRect.left + dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 6));
-                    } else {
-                        left = (int) (storyParams.originalAvatarRect.right - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 6));
-                    }
+            boolean isOnline = isOnline();
+            int statusColor = 0;
+            if (isOnline) {
+                statusColor = Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider);
+            } else if (user.status != null && user.status.expires > 0) {
+                int currentTime = ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                int diff = currentTime - user.status.expires;
+                if (diff >= 0 && diff < 300) {
+                    statusColor = 0xFFFFD600; // Жёлтый (< 5 мин)
+                } else if (diff >= 300 && diff < 1500) {
+                    statusColor = 0xFFFF9100; // Оранжевый (5–25 мин)
+                } else if (diff >= 1500 && diff <= 3600) {
+                    statusColor = 0xFFFF3B30; // Красный (25–60 мин)
+                }
+            }
+            boolean showStatus = statusColor != 0;
+            wasDrawnOnline = showStatus;
+            if (showStatus || onlineProgress != 0) {
+                int top = (int) (storyParams.originalAvatarRect.bottom - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 6 : 8));
+                int left;
+                if (LocaleController.isRTL) {
+                    left = (int) (storyParams.originalAvatarRect.left + dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 6));
+                } else {
+                    left = (int) (storyParams.originalAvatarRect.right - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 6));
+                }
 
-                    Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
-                    canvas.drawCircle(left, top, dp(7) * onlineProgress, Theme.dialogs_onlineCirclePaint);
-                    Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider));
-                    canvas.drawCircle(left, top, dp(5) * onlineProgress, Theme.dialogs_onlineCirclePaint);
-                    if (isOnline) {
-                        if (onlineProgress < 1.0f) {
-                            onlineProgress += 16f / 150.0f;
-                            if (onlineProgress > 1.0f) {
-                                onlineProgress = 1.0f;
-                            }
-                            needInvalidate = true;
+                Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
+                canvas.drawCircle(left, top, dp(7) * onlineProgress, Theme.dialogs_onlineCirclePaint);
+                Theme.dialogs_onlineCirclePaint.setColor(showStatus ? statusColor : Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider));
+                canvas.drawCircle(left, top, dp(5) * onlineProgress, Theme.dialogs_onlineCirclePaint);
+                if (showStatus) {
+                    if (onlineProgress < 1.0f) {
+                        onlineProgress += 16f / 150.0f;
+                        if (onlineProgress > 1.0f) {
+                            onlineProgress = 1.0f;
                         }
-                    } else {
-                        if (onlineProgress > 0.0f) {
-                            onlineProgress -= 16f / 150.0f;
-                            if (onlineProgress < 0.0f) {
-                                onlineProgress = 0.0f;
-                            }
-                            needInvalidate = true;
+                        needInvalidate = true;
+                    }
+                } else {
+                    if (onlineProgress > 0.0f) {
+                        onlineProgress -= 16f / 150.0f;
+                        if (onlineProgress < 0.0f) {
+                            onlineProgress = 0.0f;
                         }
+                        needInvalidate = true;
                     }
                 }
+            }
             } else if (chat != null) {
                 hasCall = chat.call_active && chat.call_not_empty;
                 if ((hasCall || chatCallProgress != 0) && rightFragmentOpenedProgress < 1f) {
