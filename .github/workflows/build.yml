@@ -1,0 +1,55 @@
+name: Build SalatikkGram APK
+
+on:
+  workflow_dispatch: # Запуск вручную по кнопке во вкладке Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Скачивание исходников и подмодулей
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Установка Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Подготовка подписи и ключей API
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+        run: |
+          # Генерируем временный ключ подписи для тестовых сборок
+          keytool -genkey -v -keystore TMessagesProj/config/release.keystore \
+            -alias release -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass salatikk123 -keypass salatikk123 \
+            -dname "CN=SalatikkGram, OU=Dev, O=Salatikk, L=SPb, S=SPb, C=RU"
+
+          # Подставляем API_ID и API_HASH в BuildVars.java
+          sed -i "s/public static int APP_ID = .*/public static int APP_ID = ${API_ID};/" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+          sed -i "s/public static String APP_HASH = .*/public static String APP_HASH = \"${API_HASH}\";/" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+
+          # Прописываем параметры подписи для Gradle
+          cat <<EOF >> gradle.properties
+          RELEASE_STORE_FILE=config/release.keystore
+          RELEASE_STORE_PASSWORD=salatikk123
+          RELEASE_KEY_ALIAS=release
+          RELEASE_KEY_PASSWORD=salatikk123
+          EOF
+
+      - name: Права на запуск Gradle
+        run: chmod +x gradlew
+
+      - name: Сборка APK (Standalone)
+        run: ./gradlew :TMessagesProj_AppStandalone:assembleStandaloneRelease --no-daemon
+
+      - name: Загрузка готового APK в артефакты
+        uses: actions/upload-artifact@v4
+        with:
+          name: SalatikkGram-APK
+          path: TMessagesProj_AppStandalone/build/outputs/apk/**/*.apk
