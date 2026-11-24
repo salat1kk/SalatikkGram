@@ -48,7 +48,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Сборка APK (Standalone)
-        run: ./gradlew :TMessagesProj_AppStandalone:assembleStandaloneRelease --no-daemon
+        run: ./gradlew :TMessagesProj_AppStandalone:assembleAfatRelease --no-daemon
 
       - name: Загрузка готового APK в артефакты
         uses: actions/upload-artifact@v4
