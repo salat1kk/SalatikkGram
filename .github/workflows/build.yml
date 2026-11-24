@@ -25,6 +25,8 @@ jobs:
           API_HASH: ${{ secrets.API_HASH }}
         run: |
           # Генерируем временный ключ подписи для тестовых сборок
+          # Генерируем временный ключ подписи для тестовых сборок
+          rm -f TMessagesProj/config/release.keystore
           keytool -genkey -v -keystore TMessagesProj/config/release.keystore \
             -alias release -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass salatikk123 -keypass salatikk123 \
